@@ -21,7 +21,7 @@ Official implementation of **TUNE++** (Topology and UNcertainty-aware Efficient 
 
 ---
 
-## 📊 Results
+## Results
 
 ### Quantitative Results
 
