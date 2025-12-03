@@ -8,7 +8,7 @@ Official implementation of **TUNE++** (Topology and UNcertainty-aware Efficient 
 
 - **First unified framework** jointly modeling segmentation, uncertainty quantification, and topology preservation
 - **Novel TUPA mechanism** combining spatial, channel, topology-aware attention with uncertainty-guided fusion
-- **State-of-the-art results** on 5 medical imaging benchmarks (Synapse, ACDC, BraTS, BTCV, Decathlon-Lung)
+- **State-of-the-art results** on 3 medical imaging benchmarks (Synapse, ACDC, BTCV)
 - **72% reduction** in topological errors with superior uncertainty calibration (ECE 0.043)
 - **Clinically reliable** predictions with anatomically plausible topology
 ---
