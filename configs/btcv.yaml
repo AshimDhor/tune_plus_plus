@@ -1,0 +1,44 @@
+# BTCV Multi-Organ CT Dataset Configuration
+dataset:
+  name: "btcv"
+  data_dir: "./data/BTCV"
+  num_classes: 14
+  classes: ["background", "spleen", "kidney_r", "kidney_l", "gallbladder", "esophagus", 
+            "liver", "stomach", "aorta", "inferior_vena_cava", "portal_vein", 
+            "pancreas", "adrenal_r", "adrenal_l"]
+  
+model:
+  in_channels: 1
+  out_channels: 14
+  img_size: [96, 96, 96]
+  patch_size: [4, 4, 2]
+  embed_dim: 32
+  depths: [3, 3, 9, 3]
+  num_heads: [3, 6, 12, 24]
+  window_size: 7
+  drop_path_rate: 0.2
+  
+loss:
+  lambda1: 0.3
+  lambda2: 0.2
+  lambda3: 0.1
+  lambda4: 0.15
+  
+  topology_weights:
+    w_b: 1.0
+    w_j: 2.0
+    w_a: 3.0
+    
+training:
+  batch_size: 2
+  num_epochs: 1000
+  learning_rate: 0.0001
+  optimizer: "adamw"
+  weight_decay: 0.0001
+  scheduler: "cosine"
+  warmup_epochs: 50
+  
+inference:
+  mc_samples: 25
+  sliding_window: true
+  overlap: 0.5
