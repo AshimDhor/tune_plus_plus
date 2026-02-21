@@ -225,6 +225,6 @@ We thank the MIDL 2026 reviewers for their valuable feedback that significantly 
 
 ---
 
-## License
+<!-- ## License
 
-This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details. -->
