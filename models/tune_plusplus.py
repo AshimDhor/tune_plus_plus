@@ -1,5 +1,6 @@
 import torch
 import torch.nn as nn
+import torch.nn.functional as F
 from .tupa_block import TUPABlock
 
 
@@ -15,58 +16,65 @@ class PatchEmbedding(nn.Module):
     def forward(self, x):
         x = self.proj(x)  # B, C, H, W, D
         B, C, H, W, D = x.shape
-        x = x.flatten(2).transpose(1, 2)  # B, N, C
-        x = self.norm(x)
         return x, (H, W, D)
 
 
+class DownsampleLayer(nn.Module):
+    """Downsample with convolution"""
+    
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.conv = nn.Conv3d(in_dim, out_dim, kernel_size=3, stride=2, padding=1)
+        self.norm = nn.BatchNorm3d(out_dim)
+        
+    def forward(self, x):
+        return self.norm(self.conv(x))
+
+
+class UpsampleLayer(nn.Module):
+    """Upsample with transposed convolution"""
+    
+    def __init__(self, in_dim, out_dim):
+        super().__init__()
+        self.conv = nn.ConvTranspose3d(in_dim, out_dim, kernel_size=2, stride=2)
+        self.norm = nn.BatchNorm3d(out_dim)
+        
+    def forward(self, x):
+        return self.norm(self.conv(x))
+
+
 class EncoderStage(nn.Module):
-    """Single encoder stage with TUPA"""
+    """Encoder stage with TUPA blocks"""
     
     def __init__(self, dim, depth=3, num_heads=8):
         super().__init__()
         self.blocks = nn.ModuleList([
             TUPABlock(dim, num_heads) for _ in range(depth)
         ])
-        self.downsample = nn.Conv3d(dim, dim * 2, kernel_size=3, stride=2, padding=1)
         
-    def forward(self, x, spatial_dims):
-        H, W, D = spatial_dims
-        B, N, C = x.shape
-        
-        # Reshape to 3D
-        x = x.transpose(1, 2).reshape(B, C, H, W, D)
-        
+    def forward(self, x):
         uncertainties = []
         for blk in self.blocks:
             x, unc = blk(x)
             uncertainties.append(unc)
-        
-        # Downsample
-        x_down = self.downsample(x)
-        
-        return x, x_down, uncertainties
+        return x, uncertainties
 
 
 class DecoderStage(nn.Module):
-    """Single decoder stage with skip connections"""
+    """Decoder stage with skip connections"""
     
     def __init__(self, dim, depth=3, num_heads=8):
         super().__init__()
-        self.upsample = nn.ConvTranspose3d(dim, dim // 2, kernel_size=2, stride=2)
         self.blocks = nn.ModuleList([
-            TUPABlock(dim // 2, num_heads) for _ in range(depth)
+            TUPABlock(dim, num_heads) for _ in range(depth)
         ])
         
     def forward(self, x, skip):
-        x = self.upsample(x)
-        x = x + skip  # Skip connection
-        
+        x = x + skip
         uncertainties = []
         for blk in self.blocks:
             x, unc = blk(x)
             uncertainties.append(unc)
-            
         return x, uncertainties
 
 
@@ -77,60 +85,82 @@ class TUNEPlusPlus(nn.Module):
                  embed_dim=32, depths=[3, 3, 9, 3], num_heads=[3, 6, 12, 24]):
         super().__init__()
         
+        self.num_stages = len(depths)
+        dims = [embed_dim * (2 ** i) for i in range(self.num_stages)]
+        
         # Patch embedding
         self.patch_embed = PatchEmbedding(in_channels, embed_dim)
         
-        # Encoder
-        dims = [embed_dim * (2 ** i) for i in range(len(depths))]
-        self.encoders = nn.ModuleList([
-            EncoderStage(dims[i], depths[i], num_heads[i]) 
-            for i in range(len(depths))
-        ])
+        # Encoder stages
+        self.encoder_stages = nn.ModuleList()
+        self.downsample_layers = nn.ModuleList()
         
-        # Decoder
-        self.decoders = nn.ModuleList([
-            DecoderStage(dims[i], depths[i], num_heads[i])
-            for i in range(len(depths) - 1, 0, -1)
-        ])
+        for i in range(self.num_stages):
+            self.encoder_stages.append(
+                EncoderStage(dims[i], depths[i], num_heads[i])
+            )
+            if i < self.num_stages - 1:
+                self.downsample_layers.append(
+                    DownsampleLayer(dims[i], dims[i + 1])
+                )
+        
+        # Decoder stages
+        self.upsample_layers = nn.ModuleList()
+        self.decoder_stages = nn.ModuleList()
+        
+        for i in range(self.num_stages - 1, 0, -1):
+            self.upsample_layers.append(
+                UpsampleLayer(dims[i], dims[i - 1])
+            )
+            self.decoder_stages.append(
+                DecoderStage(dims[i - 1], depths[i - 1], num_heads[i - 1])
+            )
         
         # Output heads
         self.seg_head = nn.Sequential(
             nn.Conv3d(embed_dim, embed_dim, 3, padding=1),
+            nn.BatchNorm3d(embed_dim),
+            nn.ReLU(inplace=True),
             nn.Conv3d(embed_dim, out_channels, 1),
-            nn.Upsample(scale_factor=2, mode='trilinear', align_corners=False)
+            nn.Upsample(scale_factor=4, mode='trilinear', align_corners=False)  # Match patch size
         )
         
         self.aleatoric_head = nn.Sequential(
             nn.Conv3d(embed_dim, embed_dim // 2, 3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv3d(embed_dim // 2, out_channels, 1),
-            nn.Softplus()
+            nn.Softplus(),
+            nn.Upsample(scale_factor=4, mode='trilinear', align_corners=False)
         )
         
         self.epistemic_head = nn.Sequential(
             nn.Conv3d(embed_dim, embed_dim // 2, 3, padding=1),
             nn.ReLU(inplace=True),
             nn.Conv3d(embed_dim // 2, out_channels, 1),
-            nn.Softplus()
+            nn.Softplus(),
+            nn.Upsample(scale_factor=4, mode='trilinear', align_corners=False)
         )
         
     def forward(self, x):
-        # Embedding
+        # Patch embedding
         x, spatial_dims = self.patch_embed(x)
         
         # Encoder
-        skips = []
+        encoder_features = []
         all_uncertainties = []
         
-        for encoder in self.encoders:
-            skip, x, unc = encoder(x, spatial_dims)
-            skips.append(skip)
+        for i, encoder in enumerate(self.encoder_stages):
+            x, unc = encoder(x)
+            encoder_features.append(x)
             all_uncertainties.extend(unc)
-            # Update spatial dims after downsampling
-            spatial_dims = tuple(d // 2 for d in spatial_dims)
+            
+            if i < len(self.downsample_layers):
+                x = self.downsample_layers[i](x)
         
         # Decoder
-        for decoder, skip in zip(self.decoders, reversed(skips[:-1])):
+        for i, (upsample, decoder) in enumerate(zip(self.upsample_layers, self.decoder_stages)):
+            x = upsample(x)
+            skip = encoder_features[-(i + 2)]  # Get corresponding encoder feature
             x, unc = decoder(x, skip)
             all_uncertainties.extend(unc)
         
