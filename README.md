@@ -172,16 +172,6 @@ loss:
   lambda4: 0.15   # Hierarchical loss weight
 ```
 
-### Loss Weight Sensitivity
-
-TUNE++ is robust to loss weight variations:
-- **±33% perturbation:** Performance degrades by only 0.2-0.4% DSC
-- **Uniform weighting (1:1:1:1):** Only 0.2% DSC drop
-- **10× scaling:** Negligible impact on performance
-
-See Appendix A.1 in paper for detailed sensitivity analysis.
-
----
 
 ## Inference
 
@@ -218,35 +208,7 @@ mean_pred, aleatoric, epistemic = monte_carlo_inference(
 
 ---
 
-## Methodology
 
-### TUPA Block
-
-The core innovation is the **Topology-Uncertainty Aware Paired Attention** mechanism:
-
-1. **Shared Query-Key Projection:** Efficient parameter sharing across branches
-2. **Spatial Attention:** Dimensionality reduction from O(N²C) to O(NPC) where P << N
-3. **Channel Attention:** Feature recalibration across semantic channels
-4. **Topology-Aware Attention:** Critical point detector identifies boundaries, junctions, anomalies
-5. **Uncertainty Estimation:** Dual MLP for aleatoric + epistemic uncertainty
-6. **Adaptive Fusion:** Uncertainty-guided weighting balances data-driven vs. structure-driven features
-
-**Key Insight:** High uncertainty regions rely more on topology (strong priors), while confident regions rely on data-driven attention.
-
-### Loss Functions
-
-**Total Loss:**
-```
-L_total = L_seg + λ₁L_topo + λ₂L_unc + λ₃L_calib + λ₄L_hier
-```
-
-- **L_seg:** Dice + Cross-Entropy for segmentation accuracy
-- **L_topo:** Persistent homology + Betti numbers + critical points for topology preservation
-- **L_unc:** Aleatoric + Epistemic + Alignment for uncertainty decomposition
-- **L_calib:** ECE + Brier score for calibration
-- **L_hier:** Multi-scale persistence diagram consistency
-
-**Default Weights:** λ₁=0.3, λ₂=0.2, λ₃=0.1, λ₄=0.15
 
 ### Topological Complexity Score
 ```
