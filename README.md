@@ -218,3 +218,13 @@ C_topo = w_b × Boundaries + w_j × Junctions + w_a × Anomalies
 - **w_b=1.0:** Organ boundaries (baseline difficulty)
 - **w_j=2.0:** Multi-organ junctions (higher complexity)
 - **w_a=3.0:** Topological anomalies (severe violations)
+
+## Acknowledgments
+
+We thank the MIDL 2026 reviewers for their valuable feedback that significantly improved this work.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see [LICENSE](LICENSE) file for details.
