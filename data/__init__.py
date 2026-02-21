@@ -1,3 +1,13 @@
-from .dataset import MedicalDataset, get_dataloader
+from .dataset import (
+    SynapseDataset,
+    ACDCDataset,
+    get_dataset,
+    get_dataloader
+)
 
-__all__ = ['MedicalDataset', 'get_dataloader']
+__all__ = [
+    'SynapseDataset',
+    'ACDCDataset', 
+    'get_dataset',
+    'get_dataloader'
+]
