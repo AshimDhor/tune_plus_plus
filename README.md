@@ -9,14 +9,14 @@
 
 ## What This Does
 
-Medical segmentation models achieve high Dice scores while producing anatomically impossible outputs: livers split into fragments, kidneys with spurious holes. Standard uncertainty doesn't help—it correlates weakly with actual structural errors.
+Medical segmentation models achieve high Dice scores while producing anatomically impossible outputs: livers split into fragments, kidneys with spurious holes. Standard uncertainty doesn't help-it correlates weakly with actual structural errors.
 
 **TUNE++ fixes this through explicit topology-uncertainty coupling:**
 - Enforces topological correctness (proper connectivity, no anomalous holes)
 - Quantifies uncertainty that correlates with structural complexity (r=0.78)
 - Unified attention mechanism, not post-processing hacks
 
-**Architecture**: Hierarchical transformer with TUPA (Topology-Uncertainty Aware Paired Attention). Three parallel branches—spatial, channel, topology—fused adaptively using predicted uncertainty. High uncertainty → rely on structural priors. Low uncertainty → trust data.
+**Architecture**: Hierarchical transformer with TUPA (Topology-Uncertainty Aware Paired Attention). Three parallel branches-spatial, channel, topology-fused adaptively using predicted uncertainty. High uncertainty → rely on structural priors. Low uncertainty → trust data.
 
 ![TUNE++ Architecture](media/architecture.png)
 
@@ -122,7 +122,7 @@ aleatoric = model.aleatoric_head(x)
 
 **Rare variants** (horseshoe kidney): Model enforces learned priors, doesn't adapt.
 
-*Predictable, interpretable failures—not random.*
+*Predictable, interpretable failures-not random.*
 
 ---
 
