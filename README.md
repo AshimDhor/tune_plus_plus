@@ -3,7 +3,7 @@
 
 **MIDL 2026** | PMLR
 
-> *When your model fragments organs or punches holes through solid tissue—confidently—you need topology-aware uncertainty. TUNE++ couples both explicitly.*
+> *When your model fragments organs or punches holes through solid tissue - confidently - you need topology-aware uncertainty. TUNE++ couples both explicitly.*
 
 ---
 
